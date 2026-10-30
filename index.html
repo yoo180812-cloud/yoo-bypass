@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#dff4ff">
+<title>Universal Link Resolver</title>
+<style>
+:root{--blue:#279bd8;--ink:#16344a;--muted:#678196;--line:#d8eaf4}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink);background:linear-gradient(145deg,#eaf8ff,#ccecff 55%,#f7fcff);display:grid;place-items:center;padding:22px}
+main{width:min(100%,560px);background:#ffffffed;border:1px solid #fff;border-radius:28px;padding:30px;box-shadow:0 20px 60px #4b9ac526}
+.logo{width:52px;height:52px;border-radius:17px;background:#e0f4ff;display:grid;place-items:center;font-size:25px;margin-bottom:18px}
+h1{font-size:clamp(27px,6vw,36px);margin:0 0 8px;letter-spacing:-1px}p{color:var(--muted);line-height:1.55;margin:0 0 22px}
+label{font-weight:650;display:block;margin:0 0 9px}
+input{width:100%;padding:16px;border:1px solid var(--line);border-radius:14px;font:inherit;outline:none;background:#fbfeff}
+input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #279bd81c}
+button{width:100%;border:0;border-radius:14px;background:var(--blue);color:white;font:700 16px inherit;padding:16px;margin-top:13px;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
+.result{display:none;margin-top:20px;padding:16px;border:1px solid var(--line);border-radius:15px;background:#f6fcff;overflow-wrap:anywhere}
+.result strong{display:block;margin-bottom:8px}.result a{color:#147eb8;word-break:break-all}
+.copy{background:#e5f5ff;color:#176b9b;margin-top:12px}
+.note{font-size:12px;margin-top:20px;color:#7891a2}
+.status{font-size:14px;margin-top:12px;color:var(--muted);min-height:20px}
+</style>
+</head>
+<body>
+<main>
+  <div class="logo">🔗</div>
+  <h1>Universal Link Resolver</h1>
+  <p>Periksa alamat tujuan dari tautan yang menggunakan pengalihan URL biasa.</p>
+  <form id="form">
+    <label for="url">Masukkan link</label>
+    <input id="url" type="url" placeholder="https://contoh.com/redirect..." required autocomplete="url">
+    <button id="submit" type="submit">PERIKSA LINK</button>
+  </form>
+  <div class="status" id="status" aria-live="polite"></div>
+  <section class="result" id="result">
+    <strong>Alamat tujuan</strong>
+    <a id="destination" target="_blank" rel="noopener noreferrer"></a>
+    <button class="copy" id="copy" type="button">SALIN LINK</button>
+  </section>
+  <div class="note">Hanya memeriksa pengalihan HTTP/HTTPS biasa. Tidak melewati iklan berbayar, login, CAPTCHA, paywall, atau proteksi keamanan. Selalu pastikan tujuan link tepercaya.</div>
+</main>
+<script>
+const form=document.querySelector('#form'), input=document.querySelector('#url');
+const statusEl=document.querySelector('#status'), result=document.querySelector('#result');
+const destination=document.querySelector('#destination'), submit=document.querySelector('#submit');
+form.addEventListener('submit',async e=>{
+ e.preventDefault(); result.style.display='none'; statusEl.textContent='';
+ let parsed; try{parsed=new URL(input.value.trim())}catch{statusEl.textContent='Masukkan URL yang valid.';return}
+ if(!['http:','https:'].includes(parsed.protocol)){statusEl.textContent='Hanya URL HTTP atau HTTPS yang didukung.';return}
+ submit.disabled=true; submit.textContent='MEMERIKSA...';
+ try{
+   const r=await fetch('/api/resolve?url='+encodeURIComponent(parsed.href));
+   const data=await r.json();
+   if(!r.ok) throw new Error(data.error||'Link tidak dapat diperiksa.');
+   destination.href=data.destination; destination.textContent=data.destination;
+   result.style.display='block'; statusEl.textContent='Pemeriksaan selesai.';
+ }catch(err){statusEl.textContent=err.message||'Terjadi kesalahan. Coba lagi nanti.'}
+ finally{submit.disabled=false;submit.textContent='PERIKSA LINK'}
+});
+document.querySelector('#copy').addEventListener('click',async()=>{
+ try{await navigator.clipboard.writeText(destination.href);statusEl.textContent='Link berhasil disalin.'}
+ catch{statusEl.textContent='Tidak bisa menyalin otomatis. Salin link secara manual.'}
+});
+</script>
+</body>
+</html>
